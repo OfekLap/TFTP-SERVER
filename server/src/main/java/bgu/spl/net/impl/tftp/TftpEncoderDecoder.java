@@ -9,11 +9,12 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     // TODO: Implement here the TFTP encoder and decoder
     private byte[] bytes = new byte[1 << 10]; // start with 1k
     private int len = 0;
-    private int numOfBytes = 0;
     private int opcode = 0;
+    private short size = 0;
+    private byte[] dataSize = new byte[2];
 
     public short byteToShort(byte[] b) {
-        short b_short = (short) (((short) bytes[0] & 0xFF) << 8 | (short) (bytes[1]));
+        short b_short = (short) (((short) b[0] & 0xFF) << 8 | (short) (b[1] & 0xFF));
         return b_short;
     }
 
@@ -24,44 +25,46 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
 
     @Override
     public byte[] decodeNextByte(byte nextByte) {
-        // TODO: implement this
-        byte[] dataSize = new byte[2];
-        short size = 0;
 
-        if (numOfBytes == 0) {
-            bytes[numOfBytes] = nextByte;
-            numOfBytes++;
+        if (len == 0) {
+            pushByte(nextByte);
             return null;
         }
-        if (numOfBytes == 1) {
+        if (len == 1) {
             opcode = Byte.toUnsignedInt(nextByte);
-            bytes[numOfBytes] = nextByte;
-            numOfBytes++;
+            pushByte(nextByte);
+            if (opcode == 6 || opcode == 10) {
+                return copyBytes(bytes, len);
+            }
             return null;
         }
-        if (numOfBytes >= 2) {
-            if (Byte.toUnsignedInt(nextByte) == 0 && opcode != 3 && opcode != 4 && opcode != 5) {
-                return bytes;
+        if (len >= 2) {
+            if (Byte.toUnsignedInt(nextByte) == 0 && opcode != 3 && opcode != 4 && opcode != 5 && opcode != 6
+                    && opcode != 10) {
+                return copyBytes(bytes, len);
             } else if (opcode == 3) {
-                if (numOfBytes == 3) {
+                if (len == 2) {
                     dataSize[0] = nextByte;
+                    System.out.println("dataSize[0] is " + dataSize[0]);
                 }
-                if (numOfBytes == 4) {
+                if (len == 3) {
                     dataSize[1] = nextByte;
                     size = byteToShort(dataSize);
+                    System.out.println("dataSize[1] is " + dataSize[1]);
+                    System.out.println("size is " + size);
+
                 }
-                if (numOfBytes == size) {
-                    return bytes;
+                if (len >= 4 && len == size + 6) {
+                    return copyBytes(bytes, len);
                 }
-            } else if (opcode == 4 && numOfBytes >= 4) {
-                bytes[numOfBytes] = nextByte;
-                numOfBytes++;
-                return bytes;
-            } else if (opcode != 5 && numOfBytes >= 4 && Byte.toUnsignedInt(nextByte) == 0) {
-                return bytes;
+            } else if (opcode == 4 && len >= 3) {
+                pushByte(nextByte);
+                return copyBytes(bytes, len);
+            } else if (opcode == 5 && len >= 4 && Byte.toUnsignedInt(nextByte) == 0) {
+                return copyBytes(bytes, len);
             }
-            bytes[numOfBytes] = nextByte;
-            numOfBytes++;
+
+            pushByte(nextByte);
         }
         return null;
 
@@ -77,7 +80,21 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
             bytes = Arrays.copyOf(bytes, len * 2);
         }
 
-        bytes[len++] = nextByte;
+        bytes[len] = nextByte;
+        len++;
+    }
+
+    private byte[] copyBytes(byte[] toCopy, int len) {
+        byte[] toReturn = new byte[len];
+        for (int i = 0; i < len; i++) {
+            toReturn[i] = toCopy[i];
+        }
+        this.len = 0;
+        opcode = 0;
+        size = 0;
+        Arrays.fill(bytes, (byte) 0);
+        Arrays.fill(dataSize, (byte) 0);
+        return toReturn;
     }
 
 }
