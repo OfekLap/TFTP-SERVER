@@ -42,7 +42,6 @@ public abstract class BaseServer<T> implements Server<T> {
             this.sock = serverSock; // just to be able to close
 
             while (!Thread.currentThread().isInterrupted()) {
-
                 Socket clientSock = serverSock.accept();
                 BidiMessagingProtocol<T> p = protocolFactory.get();
                 p.start(clientId, connections);
@@ -50,7 +49,9 @@ public abstract class BaseServer<T> implements Server<T> {
                         clientSock,
                         encdecFactory.get(),
                         p);
+                connections.connect(clientId, handler);
                 execute(handler);
+
             }
         } catch (IOException ex) {
         }

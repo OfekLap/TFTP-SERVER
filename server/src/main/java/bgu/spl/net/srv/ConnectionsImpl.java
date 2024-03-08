@@ -7,7 +7,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
     private ConcurrentHashMap<Integer, ConnectionHandler<T>> connectionsMap;
 
     public ConnectionsImpl() {
-        this.connectionsMap = new ConcurrentHashMap();
+        this.connectionsMap = new ConcurrentHashMap<>();
     }
 
     @Override

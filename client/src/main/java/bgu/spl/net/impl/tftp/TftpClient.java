@@ -24,7 +24,8 @@ public class TftpClient {
         try (Socket sock = new Socket(args[0], 7777);
                 BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 BufferedOutputStream out = new BufferedOutputStream(sock.getOutputStream())) {
-            byte[] x = { 0, 6, 0, 7, 8, 1, 2, 4, 5, 0, 0, 8, 7, 7, 9, 9, 0, 0, 9, 1, 4, 4, 4, 0, 0, 10 };
+            byte[] x = { 0, 1, 72, 69, 76, 76, 79, 32, 79, 70, 69, 75, 32, 65, 78, 68, 32, 84, 79, 77, 69, 82, 0 };
+
             out.write(x);
             out.flush();
             System.out.println("Bytes sent to server");
