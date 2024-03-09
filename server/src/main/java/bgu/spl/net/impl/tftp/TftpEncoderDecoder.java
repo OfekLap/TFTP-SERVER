@@ -11,7 +11,6 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
     private int len = 0;
     private int opcode = 0;
     private short size = 0;
-    private int blockNum = 0;
     private byte[] dataSize = new byte[2];
 
     public short byteToShort(byte[] b) {
