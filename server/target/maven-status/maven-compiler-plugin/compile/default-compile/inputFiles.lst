@@ -16,6 +16,7 @@ C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\rci\Command.java
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\tftp\TftpServer.java
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\rci\RemoteCommandInvocationProtocol.java
+C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\tftp\ServerInfo.java
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\echo\EchoProtocol.java
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\impl\newsfeed\NewsFeedServerMain.java
 C:\Users\ofekl\Downloads\Skeleton (1)\Skeleton\server\src\main\java\bgu\spl\net\srv\ConnectionsImpl.java

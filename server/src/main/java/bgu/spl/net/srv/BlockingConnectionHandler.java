@@ -10,6 +10,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler<T> {
 
@@ -55,13 +56,16 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        // IMPLEMENT IF NEEDED
         try {
             byte[] bytesToSend = encdec.encode(msg); // Encode the message to bytes
             out.write(bytesToSend); // Write the bytes to the output stream
-            out.flush(); // Flush the output stream to ensure all bytes are sent
+            // out.flush(); // Flush the output stream to ensure all bytes are sent
+        } catch (SocketException ex) {
+            // Handle or log the SocketException
+            ex.printStackTrace();
         } catch (IOException ex) {
-            ex.printStackTrace(); // Handle or log any exceptions that occur during sending
+            // Handle or log any other IOException
+            ex.printStackTrace();
         }
     }
 

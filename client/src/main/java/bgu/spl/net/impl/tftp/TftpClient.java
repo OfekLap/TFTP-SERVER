@@ -11,6 +11,7 @@ import java.net.Socket;
 public class TftpClient {
     // TODO: implement the main logic of the client, when using a thread per client
     // the main logic goes here
+
     public static void main(String[] args) {
         if (args.length == 0) {
             args = new String[] { "localhost", "hello" };
@@ -24,10 +25,13 @@ public class TftpClient {
         try (Socket sock = new Socket(args[0], 7777);
                 BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
                 BufferedOutputStream out = new BufferedOutputStream(sock.getOutputStream())) {
-            byte[] x = { 0, 7, 72, 69, 76, 76, 79, 0, 0, 2, 32, 79, 70, 69, 0, 0, 3, 75, 32, 65, 78, 68, 32, 84, 79, 77,
-                    69, 82, 0 };
-
+            byte[] x = { 0, 7, 111, 102, 101, 107, 0, 0, 2, 116, 111, 109, 101, 114, 0, 0, 3, 0, 15, 0, 1, 109, 121, 32,
+                    110, 97, 109, 101, 32, 105, 115, 32, 116, 111, 109, 101, 114 };
             out.write(x);
+            out.flush();
+            byte[] y = { 0, 2, 111, 102, 101, 107, 0, 0, 3, 0,
+                    14, 0, 1, 109, 121, 32, 110, 97, 109, 101, 32, 105, 115, 32, 111, 102, 101, 107, 0, 6 };
+            out.write(y);
             out.flush();
             System.out.println("Bytes sent to server");
             // out.newLine();

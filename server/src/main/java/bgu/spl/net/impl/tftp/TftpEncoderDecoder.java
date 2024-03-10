@@ -52,6 +52,7 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     size = byteToShort(dataSize);
                 }
                 if (len >= 4 && len == size + 6) {
+                    pushByte(nextByte);
                     return copyBytes(bytes, len);
                 }
             } else if (opcode == 4 && len >= 3) {

@@ -1,10 +1,14 @@
 package bgu.spl.net.srv;
 
+import java.util.concurrent.ConcurrentHashMap;
+import bgu.spl.net.impl.tftp.ServerInfo;
 import java.io.IOException;
 
 public interface Connections<T> {
 
-    void connect(int connectionId, ConnectionHandler<T> handler);
+    ConcurrentHashMap<Integer, ConnectionHandler<T>> getConnectionsMap();
+
+    void connect(int connectionId, ConnectionHandler<T> handler, ServerInfo serverInfo);
 
     boolean send(int connectionId, T msg);
 
