@@ -1,47 +1,122 @@
 package bgu.spl.net.impl.tftp;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.Socket;
 
+import java.io.*;
+
 public class TftpClient {
-    // TODO: implement the main logic of the client, when using a thread per client
-    // the main logic goes here
+
+    public static byte[] convertToPacket(byte[] message, String opcode) {
+        if (opcode.equals("LOGRQ")) {
+            byte[] ans = new byte[message.length + 3];
+            ans[0] = 0;
+            ans[1] = 7;
+            ans[ans.length - 1] = 0;
+            int index = 2;
+            for (byte b : message) {
+                ans[index] = b;
+                index++;
+            }
+            return ans;
+        } else if (opcode.equals("DELRQ")) {
+            byte[] ans = new byte[message.length + 3];
+            ans[0] = 0;
+            ans[1] = 8;
+            ans[ans.length - 1] = 0;
+            int index = 2;
+            for (byte b : message) {
+                ans[index] = b;
+                index++;
+            }
+            return ans;
+        } else if (opcode.equals("RRQ")) {
+            byte[] ans = new byte[message.length + 3];
+            ans[0] = 0;
+            ans[1] = 1;
+            ans[ans.length - 1] = 0;
+            int index = 2;
+            for (byte b : message) {
+                ans[index] = b;
+                index++;
+            }
+            return ans;
+        } else if (opcode.equals("WRQ")) {
+            byte[] ans = new byte[message.length + 3];
+            ans[0] = 0;
+            ans[1] = 2;
+            ans[ans.length - 1] = 0;
+            int index = 2;
+            for (byte b : message) {
+                ans[index] = b;
+                index++;
+            }
+            return ans;
+        } else if (opcode.equals("DIRQ")) {
+            byte[] ans = new byte[2];
+            ans[0] = 0;
+            ans[1] = 6;
+            return ans;
+        } else if (opcode.equals("DISC")) {
+            byte[] ans = new byte[2];
+            ans[0] = 0;
+            ans[1] = 10;
+            return ans;
+        } else {
+            return null;
+        }
+
+    }
 
     public static void main(String[] args) {
-        if (args.length == 0) {
-            args = new String[] { "localhost", "hello" };
-        }
+        String host = "127.0.0.1"; // Local host
+        int port = 7777; // Port number
 
-        if (args.length < 2) {
-            System.out.println("you must supply two arguments: host, message");
-            System.exit(1);
-        }
+        try (Socket socket = new Socket(host, port);
+                BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
+                OutputStream out = socket.getOutputStream();
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-        try (Socket sock = new Socket(args[0], 7777);
-                BufferedReader in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
-                BufferedOutputStream out = new BufferedOutputStream(sock.getOutputStream())) {
-            byte[] x = { 0, 7, 111, 102, 101, 107, 0, 0, 2, 116, 111, 109, 101, 114, 0, 0, 3, 0, 15, 0, 1, 109, 121, 32,
-                    110, 97, 109, 101, 32, 105, 115, 32, 116, 111, 109, 101, 114 };
-            out.write(x);
-            out.flush();
-            byte[] y = { 0, 2, 111, 102, 101, 107, 0, 0, 3, 0,
-                    14, 0, 1, 109, 121, 32, 110, 97, 109, 101, 32, 105, 115, 32, 111, 102, 101, 107, 0, 6 };
-            out.write(y);
-            out.flush();
-            System.out.println("Bytes sent to server");
-            // out.newLine();
-            // System.out.println("awaiting response");
-            // String line = in.readLine();
-            // System.out.println("message from server: " + line);
+            System.out.println("Connected to server.");
+
+            // Start a thread to listen for keyboard input
+            Thread keyboardThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        System.out.print("Enter message (or 'exit' to quit): ");
+                        String userInput = keyboardReader.readLine();
+                        if (userInput.equalsIgnoreCase("exit")) {
+                            break; // Exit the loop if the user types 'exit'
+                        }
+                        String[] parts = userInput.split(" ", 2);
+                        String firstPart = parts[0];
+                        String secondPart = "";
+                        if (parts.length > 1) {
+                            secondPart = parts[1];
+                        }
+                        byte[] messageBytes = secondPart.getBytes();
+                        byte[] packet = convertToPacket(messageBytes, firstPart);
+                        if (packet == null) {
+                            System.out.println("unknown command, please try again");
+                        } else {
+                            out.write(packet);
+                            out.write('\n'); // Write a newline character to indicate the end of the message
+                            out.flush();
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            keyboardThread.start();
+
+            // Read messages from the server
+            String response;
+            while ((response = in.readLine()) != null) {
+                System.out.println("Server response: " + response);
+            }
+
         } catch (IOException e) {
-            // Handle the IOException here, e.g., print an error message
             e.printStackTrace();
         }
     }
-
 }

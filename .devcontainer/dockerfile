@@ -16,5 +16,4 @@ RUN apt-get -y install wget
 RUN wget https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
 RUN tar -xvf apache-maven-3.6.3-bin.tar.gz
 RUN mv apache-maven-3.6.3 /opt/
-RUN rm apache-maven-3.6.3-bin.tar.gz
-ENV PATH="/opt/apache-maven-3.6.3/bin:$PATH"
+RUN rm apache-maven-3.6.3-bin.tar.gzcurl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | shcurl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
