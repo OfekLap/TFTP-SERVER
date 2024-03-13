@@ -1,7 +1,7 @@
 package bgu.spl.net.impl.tftp;
 
 import bgu.spl.net.srv.BaseServer;
-import bgu.spl.net.impl.tftp.ServerInfo; ///////////////////
+import bgu.spl.net.impl.tftp.ServerInfo;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -25,20 +25,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.io.FileWriter;
 
-// public class serverInfo {
-//     static ConcurrentHashMap<Integer, String> id_logins = new ConcurrentHashMap<Integer, String>();
-//     static ConcurrentLinkedDeque<String> file_names = new ConcurrentLinkedDeque<String>();
-// }
-
 public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
 
     private int connectionId;
     private boolean shouldTerminate = false;
     private Connections<byte[]> connections;
-    private static final String PATH = "c:/Users/ofekl/Downloads/Skeleton (1)/Skeleton/server/Flies";
+    private static final String PATH = "server\\Flies";
     private String[] errorStrings;
     private String toSend;
-    private String toSave;
+    private String nameOfFileToSave;
     private byte[][] dataToSend;
     private byte[] dataToSave;
     private ServerInfo ServerInfo;
@@ -51,6 +46,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         this.ServerInfo = serverInfo;
 
         errorStrings = new String[8];
+        errorStrings[0] = "Not defined, see error message (if any).";
         errorStrings[1] = "File not found - RRQ DELRQ of non-existing file.";
         errorStrings[2] = "Access violation - File cannot be written, read or deleted.";
         errorStrings[3] = "Disk full or allocation exceeded - No room in disk.";
@@ -65,20 +61,10 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
     public void process(byte[] message) {
         // TODO implement this
 
-        // StringBuilder sb = new StringBuilder();
-        // sb.append("process got: {");
-        // for (int i = 0; i < message.length; i++) {
-        // sb.append(message[i]);
-        // if (i != message.length - 1) {
-        // sb.append(",");
-        // }
-        // }
-        // sb.append("}");
-        // System.out.println(sb.toString());
         int opcode = message[1];
         ///////////////////// the server *SENDS* files to the client /READ
         if (opcode == 1) {
-            if (!ServerInfo.id_logins.contains(connectionId)) {
+            if (!ServerInfo.id_logins.containsKey(connectionId)) {
                 sendError(6);
                 return;
             }
@@ -112,7 +98,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
                 return;
             }
             ServerInfo.file_names.add(msg);
-            toSave = msg;
+            nameOfFileToSave = msg;
             ACK(0);
 
             return;
@@ -120,6 +106,10 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         }
         ///////////////////// DATA
         else if (opcode == 3) {
+            byte[] blockByte = new byte[2];
+            blockByte[0] = message[4];
+            blockByte[1] = message[5];
+            short block = byteToShort(blockByte);
             byte[] toSave = prepareDataToSave(message);
             if (dataToSave != null) {
                 dataToSave = mergeArrays(dataToSave, toSave);
@@ -127,8 +117,10 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
                 dataToSave = toSave;
             }
             if (message.length < 518) {
-                write(dataToSave, dataToSave.length, this.toSave);
+                write(dataToSave, dataToSave.length, nameOfFileToSave);
+                BCAST(stringToBytes(nameOfFileToSave), 1);
             }
+            ACK(block);
         }
         ///////////////////// ACK
         else if (opcode == 4) {
@@ -161,6 +153,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         ///////////////////// DELETE
         else if (opcode == 8) {
             if (delete(byteToString(deleteOpcode(message)))) {
+                ServerInfo.file_names.remove(byteToString(deleteOpcode(message)));
                 ACK(0);
                 BCAST(deleteOpcode(message), 0);
             } else {
@@ -178,6 +171,8 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
                 connections.disconnect(connectionId);
                 ACK(0);
             }
+        } else {
+            sendError(4);
         }
     }
 
@@ -192,6 +187,11 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         bcast[0] = 0;
         bcast[1] = 9;
         bcast[2] = (byte) deletedOrAdd;
+        int index = 3;
+        for (int i = 0; i < message.length; i++) {
+            bcast[index] = message[i];
+            index++;
+        }
         bcast[bcast.length - 1] = 0;
         for (Integer connectionId : ServerInfo.id_logins.keySet()) {
             connections.send(connectionId, bcast);
@@ -271,7 +271,18 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
     public void sendError(int errorNum) {
         String error = errorStrings[errorNum];
         byte[] err = stringToBytes(error);
-        connections.send(connectionId, err);
+        byte[] ans = new byte[5 + err.length];
+        ans[0] = 0;
+        ans[1] = 5;
+        Byte[] errNum = shortToByte((short) errorNum);
+        ans[2] = errNum[0];
+        ans[3] = errNum[1];
+        int index = 4;
+        for (byte b : err) {
+            ans[index] = b;
+            index++;
+        }
+        connections.send(connectionId, ans);
     }
 
     public void ACK(int blockNum) {
@@ -281,6 +292,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         Byte[] blocks = shortToByte((short) blockNum);
         a[2] = blocks[0];
         a[3] = blocks[1];
+
         connections.send(connectionId, a);
     }
 
@@ -312,7 +324,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         short index = 0;
         if (numOfPackets > 0) {
             for (short i = 0; i < numOfPackets; i++) {
-                byte[] packet = new byte[512];
+                byte[] packet = new byte[518];
                 packet[0] = 0;
                 packet[1] = 3;
                 Byte[] size = shortToByte((short) (512));
@@ -333,7 +345,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
         byte[] packet = new byte[sizeOfLastPacket + 6];
         packet[0] = 0;
         packet[1] = 3;
-        Byte[] size = shortToByte((short) (sizeOfLastPacket + 6));
+        Byte[] size = shortToByte((short) (sizeOfLastPacket));
         packet[2] = size[0];
         packet[3] = size[1];
         Byte[] block = shortToByte((short) (numOfPackets + 1));
@@ -344,7 +356,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
             index++;
         }
         if (numOfPackets > 0) {
-            ans[numOfPackets + 1] = packet;
+            ans[numOfPackets] = packet;
         } else {
             ans[0] = packet;
         }

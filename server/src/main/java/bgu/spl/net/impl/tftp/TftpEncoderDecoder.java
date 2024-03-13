@@ -51,7 +51,7 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
                     dataSize[1] = nextByte;
                     size = byteToShort(dataSize);
                 }
-                if (len >= 4 && len == size + 6) {
+                if (len >= 4 && len == size + 5) {
                     pushByte(nextByte);
                     return copyBytes(bytes, len);
                 }
@@ -63,6 +63,9 @@ public class TftpEncoderDecoder implements MessageEncoderDecoder<byte[]> {
             }
 
             pushByte(nextByte);
+        }
+        if (len >= 510) {
+            return null;
         }
         return null;
 

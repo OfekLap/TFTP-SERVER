@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public interface Connections<T> {
 
-    ConcurrentHashMap<Integer, ConnectionHandler<T>> getConnectionsMap();
+    // ConcurrentHashMap<Integer, ConnectionHandler<T>> getConnectionsMap();
 
     void connect(int connectionId, ConnectionHandler<T> handler, ServerInfo serverInfo);
 

@@ -1,5 +1,7 @@
 package bgu.spl.net.srv;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 import bgu.spl.net.impl.tftp.ServerInfo;
@@ -9,6 +11,13 @@ import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
 import bgu.spl.net.impl.tftp.TftpEncoderDecoder;
 import bgu.spl.net.impl.tftp.TftpProtocol;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.io.File;
+import java.io.FileWriter;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -22,7 +31,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private ServerSocket sock;
     private int clientId = 0;
     private Connections<T> connections;
-
+    private static final String PATH = "server\\Flies";
     public ServerInfo ServerInfo;
 
     public BaseServer(
@@ -36,6 +45,10 @@ public abstract class BaseServer<T> implements Server<T> {
         this.sock = null;
         this.connections = new ConnectionsImpl<T>();
         this.ServerInfo = new ServerInfo();
+        List<String> fileNames = getAllFileNames(PATH);
+        for (String file : fileNames) {
+            ServerInfo.file_names.add(file);
+        }
     }
 
     public ServerInfo getServerInfo() {
@@ -77,4 +90,25 @@ public abstract class BaseServer<T> implements Server<T> {
 
     protected abstract void execute(BlockingConnectionHandler<T> handler);
 
+    public static List<String> getAllFileNames(String folderPath) {
+        List<String> fileNames = new ArrayList<>();
+        File folder = new File(folderPath);
+
+        // Check if the specified path is a directory
+        if (folder.exists() && folder.isDirectory()) {
+            // Retrieve all files in the directory
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    // Add file names to the list
+                    if (file.isFile()) {
+                        fileNames.add(file.getName());
+                    }
+                }
+            }
+        } else {
+            System.out.println("The specified path is not a directory or does not exist.");
+        }
+        return fileNames;
+    }
 }

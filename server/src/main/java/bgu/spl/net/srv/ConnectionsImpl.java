@@ -13,9 +13,9 @@ public class ConnectionsImpl<T> implements Connections<T> {
         this.connectionsMap = new ConcurrentHashMap<>();
     }
 
-    public ConcurrentHashMap<Integer, ConnectionHandler<T>> getConnectionsMap() {
-        return connectionsMap;
-    }
+    // public ConcurrentHashMap<Integer, ConnectionHandler<T>> getConnectionsMap() {
+    // return connectionsMap;
+    // }
 
     @Override
     public void connect(int connectionId, ConnectionHandler<T> handler, ServerInfo serverInfo) {
