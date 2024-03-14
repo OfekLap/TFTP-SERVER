@@ -13,4 +13,6 @@ public interface Connections<T> {
     boolean send(int connectionId, T msg);
 
     void disconnect(int connectionId);
+
+    // void addToQueue(T msg);
 }

@@ -5,7 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.io.*;
 
 public class TftpClient {
@@ -14,6 +16,8 @@ public class TftpClient {
     private byte[] dataToSave;
     private String lastCommand;
     private String nameOfFileToSave;
+    private String nameOfFileToSend;
+    private boolean shouldTerminate = false;
 
     public static void main(String[] args) {
         String host = "127.0.0.1"; // Local host
@@ -33,7 +37,7 @@ public class TftpClient {
                     InputStream inputStream = socket.getInputStream();
                     byte[] responseBuffer = new byte[1024]; // Adjust the buffer size as needed
                     int bytesRead;
-                    while ((bytesRead = inputStream.read(responseBuffer)) != -1) {
+                    while ((bytesRead = inputStream.read(responseBuffer)) != -1 && !client.shouldTerminate) {
                         byte[] responseBytes = Arrays.copyOf(responseBuffer, bytesRead);
                         byte[] ansToServer = client.process(responseBytes);
                         if (ansToServer != null) {
@@ -55,23 +59,17 @@ public class TftpClient {
             // Start a thread to read input from the keyboard
             Thread keyboardThread = new Thread(() -> {
                 try {
-                    while (true) {
-                        System.out.println("Enter message (or 'exit' to quit): ");
+                    while (!client.shouldTerminate) {
+                        System.out.println("Enter message");
                         String userInput = keyboardReader.readLine();
-                        if (userInput.equalsIgnoreCase("exit")) {
-                            break; // Exit the loop if the user types 'exit'
-                        }
+
                         String[] parts = userInput.split(" ", 2);
                         String firstPart = parts[0];
                         String secondPart = "";
                         if (parts.length > 1) {
                             secondPart = parts[1];
                         }
-                        if (!firstPart.equals("WRQ")) {
-                            client.lastCommand = null;
-                        } else {
-                            client.lastCommand = firstPart;
-                        }
+                        client.lastCommand = firstPart;
 
                         byte[] messageBytes = secondPart.getBytes();
                         byte[] packet = client.convertToPacket(messageBytes, firstPart, secondPart);
@@ -83,7 +81,14 @@ public class TftpClient {
                             // message
                             out.flush();
                         }
+                        if (client.lastCommand.equals("DISC")) {
+                            client.shouldTerminate = true;
+                        }
                     }
+                    // socket.close();
+                    // out.close();
+                    // keyboardReader.close();
+                    // System.exit(0);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -113,7 +118,7 @@ public class TftpClient {
         short numOfPackets = (short) (data.length / 512);
         short sizeOfLastPacket = (short) (data.length % 512);
         byte[][] ans = new byte[numOfPackets + 1][];
-        short index = 0;
+        int index = 0;
         if (numOfPackets > 0) {
             for (short i = 0; i < numOfPackets; i++) {
                 byte[] packet = new byte[518];
@@ -129,7 +134,7 @@ public class TftpClient {
                     packet[j] = data[index];
                     index++;
                 }
-                index = 0;
+                // index = 0;
                 ans[i] = packet;
             }
 
@@ -174,7 +179,9 @@ public class TftpClient {
             msg = msg + byteToString(message);
             System.out.println(msg);
             return null;
-        } else if (opcode == 5) {
+
+        } ///////////// ERROR
+        else if (opcode == 5) {
             String msg = "ERROR ";
             byte[] errCode = Arrays.copyOfRange(message, 2, 4);
             short code = byteToShort(errCode);
@@ -183,30 +190,55 @@ public class TftpClient {
             msg = msg + " " + byteToString(message);
             System.out.println(msg);
             return null;
-        } else if (opcode == 4) {
+        } ///////////// ACK
+        else if (opcode == 4) {
             short blockNum = byteToShort(Arrays.copyOfRange(message, 2, message.length));
             String toPrint = "ACK " + blockNum;
             System.out.println(toPrint);
             if (lastCommand != null && lastCommand.equals("WRQ") && blockNum < dataToSend.length) {
                 return dataToSend[blockNum];
             }
+            if (lastCommand != null && lastCommand.equals("WRQ") && blockNum == dataToSend.length) {
+                System.out.println("WRQ " + nameOfFileToSend + " completed");
+            }
 
-        } else if (opcode == 3) {
-            byte[] blockByte = new byte[2];
-            blockByte[0] = message[4];
-            blockByte[1] = message[5];
-            short block = byteToShort(blockByte);
-            byte[] toSave = prepareDataToSave(message);
-            if (dataToSave != null) {
-                dataToSave = mergeArrays(dataToSave, toSave);
+        } ///////////// DATA
+        else if (opcode == 3) {
+            if (!lastCommand.equals("DIRQ")) {
+                byte[] blockByte = new byte[2];
+                blockByte[0] = message[4];
+                blockByte[1] = message[5];
+                short block = byteToShort(blockByte);
+                System.out.println("ACK " + block);
+                byte[] toSave = prepareDataToSave(message);
+                if (dataToSave != null) {
+                    dataToSave = mergeArrays(dataToSave, toSave);
+                } else {
+                    dataToSave = toSave;
+                }
+                if (message.length < 518) {
+                    write(dataToSave, dataToSave.length, nameOfFileToSave);
+                    System.out.println("RRQ " + nameOfFileToSave + " completed");
+                    dataToSave = null;
+                }
+                return ACK(block);
             } else {
-                dataToSave = toSave;
+                List<String> names = new ArrayList<>();
+
+                int start = 6;
+                int end = 6;
+                for (int i = 6; i < message.length; i++) {
+                    if (message[i] == 0) {
+                        end = i;
+                        names.add(byteToString(Arrays.copyOfRange(message, start, end)));
+                        start = i + 1;
+                    }
+
+                }
+                for (String name : names) {
+                    System.out.println(name);
+                }
             }
-            if (message.length < 518) {
-                write(dataToSave, dataToSave.length, nameOfFileToSave);
-                dataToSave = null;
-            }
-            return ACK(block);
 
         }
         return null;
@@ -291,6 +323,12 @@ public class TftpClient {
             }
             return ans;
         } else if (opcode.equals("RRQ")) {
+
+            if (getAllFileNames(PATH).contains(fileName)) {
+                System.out.println("file already exists");
+                return null;
+
+            }
             byte[] ans = new byte[message.length + 3];
             ans[0] = 0;
             ans[1] = 1;
@@ -318,6 +356,7 @@ public class TftpClient {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            this.nameOfFileToSend = fileName;
             return ans;
         } else if (opcode.equals("DIRQ")) {
             byte[] ans = new byte[2];
@@ -333,6 +372,28 @@ public class TftpClient {
             return null;
         }
 
+    }
+
+    public static List<String> getAllFileNames(String folderPath) {
+        List<String> fileNames = new ArrayList<>();
+        File folder = new File(folderPath);
+
+        // Check if the specified path is a directory
+        if (folder.exists() && folder.isDirectory()) {
+            // Retrieve all files in the directory
+            File[] files = folder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    // Add file names to the list
+                    if (file.isFile()) {
+                        fileNames.add(file.getName());
+                    }
+                }
+            }
+        } else {
+            System.out.println("The specified path is not a directory or does not exist.");
+        }
+        return fileNames;
     }
 
 }

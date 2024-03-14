@@ -55,7 +55,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     }
 
     @Override
-    public void send(T msg) {
+    public synchronized void send(T msg) {
         try {
             byte[] bytesToSend = encdec.encode(msg); // Encode the message to bytes
             out.write(bytesToSend); // Write the bytes to the output stream
