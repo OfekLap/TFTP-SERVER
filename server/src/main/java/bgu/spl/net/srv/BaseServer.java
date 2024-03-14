@@ -31,7 +31,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private ServerSocket sock;
     private int clientId = 0;
     private Connections<T> connections;
-    private static final String PATH = "server\\Flies";
+    private static final String PATH = "./Flies";
     public ServerInfo ServerInfo;
 
     public BaseServer(

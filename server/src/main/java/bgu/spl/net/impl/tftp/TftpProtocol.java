@@ -34,7 +34,7 @@ public class TftpProtocol implements BidiMessagingProtocol<byte[]> {
     private int connectionId;
     private boolean shouldTerminate = false;
     private Connections<byte[]> connections;
-    private static final String PATH = "server\\Flies";
+    private static final String PATH = "./Flies";
     private String[] errorStrings;
     private String nameOfFileToSave;
     private byte[][] dataToSend;
